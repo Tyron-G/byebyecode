@@ -32,6 +32,12 @@ byebyecode --init --target codex
 byebyecode --wrap --target codex -- --model gpt-5.6
 ```
 
+Windows PowerShell 的 npm shim 可能移除独立的 `--`。ByeByeCode 会在 `--wrap` 模式下自动恢复参数边界，因此也支持：
+
+```powershell
+byebyecode --wrap --target codex --model gpt-5.6
+```
+
 ## For Users in China
 
 Use npm mirror for faster installation:

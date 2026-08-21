@@ -1,6 +1,6 @@
-# @cometix/ccline
+# @88code/byebyecode
 
-CCometixLine - High-performance Claude Code StatusLine tool
+Claude Code 状态栏与 Codex 兼容工具
 
 ## Installation
 
@@ -15,16 +15,21 @@ npm install -g @88code/byebyecode
 - 📦 **Easy installation**: One command via npm
 - 🔄 **Auto-update**: Built-in update notifications
 - 🎨 **Beautiful**: Nerd Font icons and colors
+- 🤖 **Codex**: 使用 Codex 原生 `tui.status_line` 配置
 
 ## Usage
 
-After installation, ccline is automatically configured for Claude Code at `~/.claude/88code/byebyecode`.
+After installation, byebyecode can configure Claude Code at `~/.claude/byebyecode`.
 
 You can also use it directly:
 
 ```bash
 byebyecode --help
 byebyecode --version
+
+# Codex
+byebyecode --init --target codex
+byebyecode --wrap --target codex -- --model gpt-5.6
 ```
 
 ## For Users in China

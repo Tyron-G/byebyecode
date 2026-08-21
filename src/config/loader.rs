@@ -1,4 +1,5 @@
 use super::types::Config;
+use crate::target::Target;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -17,7 +18,12 @@ impl ConfigLoader {
 
     /// Initialize themes directory and create built-in theme files
     pub fn init_themes() -> Result<(), Box<dyn std::error::Error>> {
-        let themes_dir = Self::get_themes_path();
+        Self::init_themes_for(Target::Claude)
+    }
+
+    /// 为指定宿主目标初始化主题。
+    pub fn init_themes_for(target: Target) -> Result<(), Box<dyn std::error::Error>> {
+        let themes_dir = Self::get_themes_path_for(target);
 
         // Create themes directory
         fs::create_dir_all(&themes_dir)?;
@@ -56,22 +62,38 @@ impl ConfigLoader {
 
     /// Get the themes directory path (~/.claude/byebyecode/themes/)
     pub fn get_themes_path() -> PathBuf {
+        Self::get_themes_path_for(Target::Claude)
+    }
+
+    /// 获取指定宿主目标的主题目录。
+    pub fn get_themes_path_for(target: Target) -> PathBuf {
         if let Some(home) = dirs::home_dir() {
-            home.join(".claude").join("byebyecode").join("themes")
+            let root = match target {
+                Target::Claude => home.join(".claude"),
+                Target::Codex => home.join(".codex"),
+            };
+            root.join("byebyecode").join("themes")
         } else {
-            PathBuf::from(".claude/byebyecode/themes")
+            match target {
+                Target::Claude => PathBuf::from(".claude/byebyecode/themes"),
+                Target::Codex => PathBuf::from(".codex/byebyecode/themes"),
+            }
         }
     }
 
     /// Ensure themes directory exists and has built-in themes (silent mode)
     pub fn ensure_themes_exist() {
-        // Silently ensure themes exist without printing output
-        let _ = Self::init_themes_silent();
+        Self::ensure_themes_exist_for(Target::Claude);
+    }
+
+    /// 确保指定宿主目标的主题文件存在。
+    pub fn ensure_themes_exist_for(target: Target) {
+        let _ = Self::init_themes_silent(target);
     }
 
     /// Initialize themes directory and create built-in theme files (silent mode)
-    fn init_themes_silent() -> Result<(), Box<dyn std::error::Error>> {
-        let themes_dir = Self::get_themes_path();
+    fn init_themes_silent(target: Target) -> Result<(), Box<dyn std::error::Error>> {
+        let themes_dir = Self::get_themes_path_for(target);
 
         // Create themes directory
         fs::create_dir_all(&themes_dir)?;
@@ -105,10 +127,14 @@ impl ConfigLoader {
 impl Config {
     /// Load configuration from default location
     pub fn load() -> Result<Config, Box<dyn std::error::Error>> {
-        // Ensure themes directory exists and has built-in themes
-        ConfigLoader::ensure_themes_exist();
+        Self::load_for_target(Target::Claude)
+    }
 
-        let config_path = Self::get_config_path();
+    /// 加载指定宿主目标的配置。
+    pub fn load_for_target(target: Target) -> Result<Config, Box<dyn std::error::Error>> {
+        ConfigLoader::ensure_themes_exist_for(target);
+
+        let config_path = Self::get_config_path_for(target);
 
         if !config_path.exists() {
             return Ok(Config::default());
@@ -121,7 +147,12 @@ impl Config {
 
     /// Save configuration to default location
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let config_path = Self::get_config_path();
+        self.save_for_target(Target::Claude)
+    }
+
+    /// 保存指定宿主目标的配置。
+    pub fn save_for_target(&self, target: Target) -> Result<(), Box<dyn std::error::Error>> {
+        let config_path = Self::get_config_path_for(target);
 
         // Ensure config directory exists
         if let Some(parent) = config_path.parent() {
@@ -133,18 +164,30 @@ impl Config {
         Ok(())
     }
 
-    /// Get the default config file path (~/.claude/byebyecode/config.toml)
-    fn get_config_path() -> PathBuf {
+    /// 获取指定宿主目标的配置路径。
+    pub fn get_config_path_for(target: Target) -> PathBuf {
         if let Some(home) = dirs::home_dir() {
-            home.join(".claude").join("byebyecode").join("config.toml")
+            let root = match target {
+                Target::Claude => home.join(".claude"),
+                Target::Codex => home.join(".codex"),
+            };
+            root.join("byebyecode").join("config.toml")
         } else {
-            PathBuf::from(".claude/byebyecode/config.toml")
+            match target {
+                Target::Claude => PathBuf::from(".claude/byebyecode/config.toml"),
+                Target::Codex => PathBuf::from(".codex/byebyecode/config.toml"),
+            }
         }
     }
 
     /// Initialize config directory and create default config
     pub fn init() -> Result<(), Box<dyn std::error::Error>> {
-        let config_path = Self::get_config_path();
+        Self::init_for_target(Target::Claude)
+    }
+
+    /// 初始化指定宿主目标的配置。
+    pub fn init_for_target(target: Target) -> Result<(), Box<dyn std::error::Error>> {
+        let config_path = Self::get_config_path_for(target);
 
         // Do not remove existing directory to avoid permission errors and data loss
         // if let Some(parent) = config_path.parent() {
@@ -161,11 +204,11 @@ impl Config {
         }
 
         // Initialize themes directory and built-in themes
-        ConfigLoader::init_themes()?;
+        ConfigLoader::init_themes_for(target)?;
 
         // Create default config
         let default_config = Config::default();
-        default_config.save()?;
+        default_config.save_for_target(target)?;
         println!("Created config at {}", config_path.display());
 
         Ok(())

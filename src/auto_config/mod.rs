@@ -3,7 +3,9 @@ use std::fs;
 use std::path::PathBuf;
 
 pub mod claude_settings;
+pub mod codex_config;
 pub use claude_settings::ClaudeSettingsConfigurator;
+pub use codex_config::CodexConfigurator;
 
 pub struct AutoConfigurator {
     config_dir: PathBuf,

@@ -1,19 +1,69 @@
 use byebyecode::cli::Cli;
 use byebyecode::config::{Config, InputData};
 use byebyecode::core::{collect_all_segments, StatusLineGenerator};
+use byebyecode::target::Target;
 use std::io::{self, IsTerminal};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Migrate legacy config directory if needed
     migrate_legacy_config()?;
 
     let cli = Cli::parse_args();
 
-    // Handle configuration commands
+    if cli.wrap {
+        let status = byebyecode::wrapper::run_target(cli.target, &cli.command_args)?;
+        return exit_with_status(status);
+    }
+
+    match cli.target {
+        Target::Claude => run_claude(cli),
+        Target::Codex => run_codex(cli),
+    }
+}
+
+fn run_codex(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
+    if cli.patch.is_some() {
+        return Err("--patch 仅支持 Claude Code，Codex 不支持修改安装文件".into());
+    }
+    if cli.config || cli.update {
+        return Err("--config 和 --update 当前仅支持 Claude Code".into());
+    }
+    if cli.command_args.is_empty() && !cli.init && !cli.print && !cli.check {
+        return Err("Codex 目标需要 --init、--check、--print 或 --wrap".into());
+    }
+
+    if cli.init {
+        Config::init_for_target(Target::Codex)?;
+        byebyecode::auto_config::CodexConfigurator::configure_statusline()?;
+        return Ok(());
+    }
+
+    if cli.print {
+        let mut config =
+            Config::load_for_target(Target::Codex).unwrap_or_else(|_| Config::default());
+        if let Some(theme) = cli.theme.as_deref() {
+            config = byebyecode::ui::themes::ThemePresets::get_theme(theme);
+        }
+        config.print()?;
+        byebyecode::auto_config::CodexConfigurator::print()?;
+        return Ok(());
+    }
+
+    if cli.check {
+        byebyecode::wrapper::find_codex()?;
+        byebyecode::auto_config::CodexConfigurator::check()?;
+        let config = Config::load_for_target(Target::Codex)?;
+        config.check()?;
+        println!("✓ Codex 环境和配置有效");
+        return Ok(());
+    }
+
+    Err("未指定有效的 Codex 操作".into())
+}
+
+fn run_claude(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     if cli.init {
         Config::init()?;
 
-        // 自动配置 Claude Code settings.json
         println!("\n正在配置 Claude Code settings.json...");
         match byebyecode::auto_config::ClaudeSettingsConfigurator::configure_statusline() {
             Ok(_) => {}
@@ -28,12 +78,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if cli.print {
         let mut config = Config::load().unwrap_or_else(|_| Config::default());
-
-        // Apply theme override if provided
-        if let Some(theme) = cli.theme {
-            config = byebyecode::ui::themes::ThemePresets::get_theme(&theme);
+        if let Some(theme) = cli.theme.as_deref() {
+            config = byebyecode::ui::themes::ThemePresets::get_theme(theme);
         }
-
         config.print()?;
         return Ok(());
     }
@@ -70,38 +117,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // Handle Claude Code patcher
     if let Some(claude_path) = cli.patch {
         use byebyecode::utils::ClaudeCodePatcher;
 
         println!("🔧 Claude Code Context Warning Disabler");
         println!("Target file: {}", claude_path);
 
-        // Create backup in same directory
         let backup_path = format!("{}.backup", claude_path);
         std::fs::copy(&claude_path, &backup_path)?;
         println!("📦 Created backup: {}", backup_path);
 
-        // Load and patch
         let mut patcher = ClaudeCodePatcher::new(&claude_path)?;
-
-        // Apply all modifications
         println!("\n🔄 Applying patches...");
 
-        // 1. Set verbose property to true
         if let Err(e) = patcher.write_verbose_property(true) {
             println!("⚠️ Could not modify verbose property: {}", e);
         }
-
-        // 2. Disable context low warnings
         patcher.disable_context_low_warnings()?;
-
-        // 3. Disable ESC interrupt display
         if let Err(e) = patcher.disable_esc_interrupt_display() {
             println!("⚠️ Could not disable esc/interrupt display: {}", e);
         }
-
-        // 4. Add statusline auto-refresh (30 seconds interval)
         if let Err(e) = patcher.add_statusline_refresh_interval(30000) {
             println!("⚠️ Could not add statusline auto-refresh: {}", e);
         }
@@ -115,17 +150,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // Load configuration
     let mut config = Config::load().unwrap_or_else(|_| Config::default());
-
-    // Apply theme override if provided
-    if let Some(theme) = cli.theme {
-        config = byebyecode::ui::themes::ThemePresets::get_theme(&theme);
+    if let Some(theme) = cli.theme.as_deref() {
+        config = byebyecode::ui::themes::ThemePresets::get_theme(theme);
     }
 
-    // Check if stdin has data
     if io::stdin().is_terminal() {
-        // No input data available, show main menu
         #[cfg(feature = "tui")]
         {
             use byebyecode::ui::{MainMenu, MenuResult};
@@ -136,44 +166,41 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         byebyecode::ui::run_configurator()?;
                     }
                     MenuResult::InitConfig => {
-                        byebyecode::config::Config::init()?;
+                        Config::init()?;
                         println!("Configuration initialized successfully!");
                     }
                     MenuResult::CheckConfig => {
-                        let config = byebyecode::config::Config::load()?;
+                        let config = Config::load()?;
                         config.check()?;
                         println!("Configuration is valid!");
                     }
-                    MenuResult::Exit => {
-                        // Exit gracefully
-                    }
+                    MenuResult::Exit => {}
                 }
             }
         }
         #[cfg(not(feature = "tui"))]
         {
             eprintln!("No input data provided and TUI feature is not enabled.");
-            eprintln!("Usage: echo '{{...}}' | ccline");
-            eprintln!("   or: ccline --help");
+            eprintln!("Usage: echo '{{...}}' | byebyecode");
+            eprintln!("   or: byebyecode --help");
         }
         return Ok(());
     }
 
-    // Read Claude Code data from stdin
     let stdin = io::stdin();
     let input: InputData = serde_json::from_reader(stdin.lock())?;
-
-    // Collect segment data
     let segments_data = collect_all_segments(&config, &input);
-
-    // Render statusline
     let generator = StatusLineGenerator::new(config);
-    let statusline = generator.generate(segments_data);
-
-    // Output statusline first (critical for Claude Code)
-    println!("{}", statusline);
+    println!("{}", generator.generate(segments_data));
 
     Ok(())
+}
+
+fn exit_with_status(status: std::process::ExitStatus) -> Result<(), Box<dyn std::error::Error>> {
+    match status.code() {
+        Some(code) => std::process::exit(code),
+        None => Err("目标进程未返回退出码".into()),
+    }
 }
 
 fn migrate_legacy_config() -> Result<(), Box<dyn std::error::Error>> {

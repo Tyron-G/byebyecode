@@ -105,6 +105,40 @@ byebyecode --config
 byebyecode --wrap
 ```
 
+### Codex 兼容
+
+Codex 使用原生 TUI footer 配置，Claude Code 仍是默认目标：
+
+```bash
+# 初始化 Codex 配置（会备份并覆盖 tui.status_line）
+byebyecode --init --target codex
+
+# 检查 Codex 可执行文件和配置
+byebyecode --check --target codex
+
+# 查看 ByeByeCode 配置与 Codex 的 tui.status_line
+byebyecode --print --target codex
+
+# 启动 Codex，并透传参数
+byebyecode --wrap --target codex -- --model gpt-5.6
+```
+
+Codex 兼容只维护 `~/.codex/config.toml` 的 `tui.status_line`，不会修改 Codex 本体或其他配置。Codex footer 只能使用官方内置状态项，Claude 专用的 `byebyecode_usage` 等自定义段落不会注入其中。`--patch` 仅支持 Claude Code。
+
+### MCP Router 凭证
+
+仓库配置不保存 MCP Router 明文令牌。使用 MCP Router 前，请在运行环境中设置 `MCPR_TOKEN`，`.mcp.json` 会通过环境变量引用它：
+
+```powershell
+$env:MCPR_TOKEN = "你的令牌"
+```
+
+```bash
+export MCPR_TOKEN="你的令牌"
+```
+
+详细设计见 [docs/兼容Codex设计_20260820.md](docs/兼容Codex设计_20260820.md)。
+
 ### 主题覆盖
 
 ```bash
@@ -216,8 +250,11 @@ xcode-select --install
   - 中文用户推荐: [Maple Font](https://github.com/subframe7536/maple-font) (支持中文的 Nerd Font)
   - 在终端中配置使用该字体
 - **Claude Code**: 用于状态栏集成
+- **Codex**（可选）: 用于 `--target codex` 和 `--wrap --target codex`
 
 ## 开发
+
+Windows 使用默认的 MSVC Rust 工具链时，需要安装 Visual Studio 2022 Build Tools，并选择“使用 C++ 的桌面开发”工作负载。进入 Visual Studio Developer PowerShell/Command Prompt 后再执行构建命令。
 
 ```bash
 # 构建开发版本
@@ -225,6 +262,10 @@ cargo build
 
 # 运行测试
 cargo test
+
+# 格式与静态检查
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features -- -D warnings
 
 # 构建优化版本
 cargo build --release

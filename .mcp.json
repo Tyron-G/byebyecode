@@ -10,7 +10,7 @@
         "connect"
       ],
       "env": {
-        "MCPR_TOKEN": "mcpr_mbuXapVlqCpYIMGpW1se40LjGMpS3g3P"
+        "MCPR_TOKEN": "${MCPR_TOKEN}"
       }
     }
   }

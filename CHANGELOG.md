@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- 新增 `--target codex`，支持初始化、检查、打印和包装启动 Codex。
+- Codex 配置覆盖前自动创建北京时间时间戳备份，并保留其他配置项。
+- 新增 Windows `codex.cmd` 查找和参数/退出码透传。
+
+### Security
+- `.mcp.json` 不再保存 MCP Router 明文令牌，改为引用 `MCPR_TOKEN` 环境变量。
+
 ## [1.0.4] - 2025-08-28
 
 ### Added

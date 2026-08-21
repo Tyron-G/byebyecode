@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.30] - 2026-08-21
+
 ### Added
 - 新增 `--target codex`，支持初始化、检查、打印和包装启动 Codex。
 - Codex 配置覆盖前自动创建北京时间时间戳备份，并保留其他配置项。
 - 新增 Windows `codex.cmd` 查找和参数/退出码透传。
+
+### Fixed
+- 修复 PowerShell npm shim 丢失 `--` 分隔符、导致 Codex 包装参数透传失败的问题。
 
 ### Security
 - `.mcp.json` 不再保存 MCP Router 明文令牌，改为引用 `MCPR_TOKEN` 环境变量。

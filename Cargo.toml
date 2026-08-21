@@ -1,6 +1,6 @@
 [package]
 name = "byebyecode"
-version = "1.1.28"
+version = "1.1.30"
 edition = "2021"
 description = "byebyecode - Claude Code and Codex compatibility wrapper with statusline and usage tracking"
 authors = ["byebyecode Team"]

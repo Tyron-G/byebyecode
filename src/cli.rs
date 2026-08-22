@@ -3,7 +3,7 @@ use std::ffi::{OsStr, OsString};
 
 use crate::target::Target;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(name = "byebyecode")]
 #[command(version, about = "byebyecode - Claude Code 与 Codex 兼容工具")]
 pub struct Cli {
@@ -100,9 +100,9 @@ mod tests {
     use clap::Parser;
 
     #[test]
-    fn defaults_to_claude_target() {
+    fn defaults_to_both_target() {
         let cli = Cli::try_parse_from(["byebyecode", "--check"]).unwrap();
-        assert_eq!(cli.target, Target::Claude);
+        assert_eq!(cli.target, Target::Both);
     }
 
     #[test]

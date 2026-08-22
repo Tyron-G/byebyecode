@@ -15,9 +15,71 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     match cli.target {
+        Target::Both => run_both(cli),
         Target::Claude => run_claude(cli),
         Target::Codex => run_codex(cli),
     }
+}
+
+fn run_both(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
+    if cli.config {
+        #[cfg(feature = "tui")]
+        {
+            println!("正在同时配置 Claude 和 Codex...");
+            let mut errors = Vec::new();
+            
+            if let Err(e) = run_claude_cli_only() {
+                errors.push(format!("Claude 配置失败: {}", e));
+            }
+            if let Err(e) = run_codex_cli_only() {
+                errors.push(format!("Codex 配置失败: {}", e));
+            }
+            
+            if !errors.is_empty() {
+                for error in errors {
+                    eprintln!("⚠ {}", error);
+                }
+                return Err("部分配置失败".into());
+            }
+            println!("✓ Claude 和 Codex 配置完成");
+        }
+        #[cfg(not(feature = "tui"))]
+        {
+            eprintln!("TUI feature is not enabled. Please install with --features tui");
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+    
+    // 其他操作按需要分发给两个目标
+    let claude_cli = cli.clone();
+    let codex_cli = cli.clone();
+    
+    let mut errors = Vec::new();
+    
+    if let Err(e) = run_claude(claude_cli) {
+        errors.push(format!("Claude 操作失败: {}", e));
+    }
+    if let Err(e) = run_codex(codex_cli) {
+        errors.push(format!("Codex 操作失败: {}", e));
+    }
+    
+    if !errors.is_empty() {
+        for error in errors {
+            eprintln!("⚠ {}", error);
+        }
+        return Err("部分操作失败".into());
+    }
+    
+    Ok(())
+}
+
+fn run_claude_cli_only() -> Result<(), Box<dyn std::error::Error>> {
+    byebyecode::ui::run_configurator(Target::Claude)
+}
+
+fn run_codex_cli_only() -> Result<(), Box<dyn std::error::Error>> {
+    byebyecode::ui::run_configurator(Target::Codex)
 }
 
 fn run_codex(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {

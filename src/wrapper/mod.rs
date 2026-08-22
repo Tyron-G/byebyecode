@@ -54,6 +54,7 @@ pub fn find_target(target: Target) -> Result<PathBuf, Box<dyn std::error::Error>
     match target {
         Target::Claude => find_claude_code(),
         Target::Codex => find_codex(),
+        Target::Both => Err("Both target is not supported for wrapper mode".into()),
     }
 }
 

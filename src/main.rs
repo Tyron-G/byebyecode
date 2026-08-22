@@ -21,15 +21,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn run_codex(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
-    if cli.patch.is_some() {
-        return Err("--patch 仅支持 Claude Code，Codex 不支持修改安装文件".into());
-    }
-    if cli.config || cli.update {
-        return Err("--config 和 --update 当前仅支持 Claude Code".into());
-    }
-    if cli.command_args.is_empty() && !cli.init && !cli.print && !cli.check {
-        return Err("Codex 目标需要 --init、--check、--print 或 --wrap".into());
-    }
+    validate_codex_cli(&cli)?;
 
     if cli.init {
         Config::init_for_target(Target::Codex)?;
@@ -54,6 +46,24 @@ fn run_codex(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
         let config = Config::load_for_target(Target::Codex)?;
         config.check()?;
         println!("✓ Codex 环境和配置有效");
+        return Ok(());
+    }
+
+    if cli.config {
+        #[cfg(feature = "tui")]
+        {
+            byebyecode::ui::run_configurator(Target::Codex)?;
+        }
+        #[cfg(not(feature = "tui"))]
+        {
+            eprintln!("TUI feature is not enabled. Please install with --features tui");
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+
+    if cli.update {
+        run_update();
         return Ok(());
     }
 
@@ -95,7 +105,7 @@ fn run_claude(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     if cli.config {
         #[cfg(feature = "tui")]
         {
-            byebyecode::ui::run_configurator()?;
+            byebyecode::ui::run_configurator(Target::Claude)?;
         }
         #[cfg(not(feature = "tui"))]
         {
@@ -106,14 +116,7 @@ fn run_claude(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if cli.update {
-        #[cfg(feature = "self-update")]
-        {
-            println!("Update feature not implemented in new architecture yet");
-        }
-        #[cfg(not(feature = "self-update"))]
-        {
-            println!("Update check not available (self-update feature disabled)");
-        }
+        run_update();
         return Ok(());
     }
 
@@ -163,7 +166,7 @@ fn run_claude(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
             if let Some(result) = MainMenu::run()? {
                 match result {
                     MenuResult::LaunchConfigurator => {
-                        byebyecode::ui::run_configurator()?;
+                        byebyecode::ui::run_configurator(Target::Claude)?;
                     }
                     MenuResult::InitConfig => {
                         Config::init()?;
@@ -196,6 +199,33 @@ fn run_claude(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+fn run_update() {
+    #[cfg(feature = "self-update")]
+    {
+        println!("Update feature not implemented in new architecture yet");
+    }
+    #[cfg(not(feature = "self-update"))]
+    {
+        println!("Update check not available (self-update feature disabled)");
+    }
+}
+
+fn validate_codex_cli(cli: &Cli) -> Result<(), Box<dyn std::error::Error>> {
+    if cli.patch.is_some() {
+        return Err("--patch 仅支持 Claude Code，Codex 不支持修改安装文件".into());
+    }
+    if cli.command_args.is_empty()
+        && !cli.init
+        && !cli.print
+        && !cli.check
+        && !cli.config
+        && !cli.update
+    {
+        return Err("Codex 目标需要 --init、--check、--print、--config、--update 或 --wrap".into());
+    }
+    Ok(())
+}
+
 fn exit_with_status(status: std::process::ExitStatus) -> Result<(), Box<dyn std::error::Error>> {
     match status.code() {
         Some(code) => std::process::exit(code),
@@ -214,4 +244,22 @@ fn migrate_legacy_config() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_codex_cli;
+    use byebyecode::cli::Cli;
+    use clap::Parser;
+
+    #[test]
+    fn codex_config_and_update_are_valid_operations() {
+        for args in [
+            ["byebyecode", "--config", "--target", "codex"],
+            ["byebyecode", "--update", "--target", "codex"],
+        ] {
+            let cli = Cli::try_parse_from(args).unwrap();
+            assert!(validate_codex_cli(&cli).is_ok());
+        }
+    }
 }

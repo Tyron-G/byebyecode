@@ -1,4 +1,5 @@
 use crate::config::{Config, SegmentId, StyleMode};
+use crate::target::Target;
 use crate::ui::components::{
     color_picker::{ColorPickerComponent, NavDirection},
     help::HelpComponent,
@@ -26,6 +27,7 @@ use std::io;
 
 pub struct App {
     config: Config,
+    target: Target,
     selected_segment: usize,
     selected_panel: Panel,
     selected_field: FieldSelection,
@@ -43,9 +45,10 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: Config, target: Target) -> Self {
         let mut app = Self {
             config: config.clone(),
+            target,
             selected_segment: 0,
             selected_panel: Panel::SegmentList,
             selected_field: FieldSelection::Enabled,
@@ -65,19 +68,19 @@ impl App {
         app
     }
 
-    pub fn run() -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run(target: Target) -> Result<(), Box<dyn std::error::Error>> {
         // Ensure themes directory and built-in themes exist
-        if let Err(e) = crate::config::loader::ConfigLoader::init_themes() {
+        if let Err(e) = crate::config::loader::ConfigLoader::init_themes_for(target) {
             eprintln!("Warning: Failed to initialize themes: {}", e);
         }
 
         // Load config
-        let mut config = Config::load().unwrap_or_else(|_| Config::default());
+        let mut config = Config::load_for_target(target).unwrap_or_else(|_| Config::default());
 
         // If a theme is specified, reload it to get the latest changes
         if !config.theme.is_empty() && config.theme != "default" {
             if let Ok(theme_config) =
-                crate::ui::themes::ThemePresets::load_theme_from_file(&config.theme)
+                crate::ui::themes::ThemePresets::load_theme_from_file_for(&config.theme, target)
             {
                 config = theme_config;
             }
@@ -90,7 +93,7 @@ impl App {
         let backend = CrosstermBackend::new(stdout);
         let mut terminal = Terminal::new(backend)?;
 
-        let mut app = App::new(config);
+        let mut app = App::new(config, target);
 
         // Main loop
         let result = loop {
@@ -246,7 +249,8 @@ impl App {
 
     fn calculate_theme_selector_height(&self, total_width: u16) -> u16 {
         // Get all available themes dynamically
-        let available_themes = crate::ui::themes::ThemePresets::list_available_themes();
+        let available_themes =
+            crate::ui::themes::ThemePresets::list_available_themes_for(self.target);
 
         // Calculate available width (minus borders only)
         let content_width = total_width.saturating_sub(2); // Remove borders
@@ -401,7 +405,8 @@ impl App {
         self.preview.render(f, layout[1]);
 
         // Theme selector
-        self.theme_selector.render(f, layout[2], &self.config);
+        self.theme_selector
+            .render(f, layout[2], &self.config, self.target);
 
         // Main content (split horizontally)
         let content_layout = Layout::default()
@@ -621,7 +626,7 @@ impl App {
     }
 
     fn cycle_theme(&mut self) {
-        let themes = crate::ui::themes::ThemePresets::list_available_themes();
+        let themes = crate::ui::themes::ThemePresets::list_available_themes_for(self.target);
         let current_theme = &self.config.theme;
         let current_index = themes.iter().position(|t| t == current_theme).unwrap_or(0);
         let next_index = (current_index + 1) % themes.len();
@@ -633,7 +638,7 @@ impl App {
 
     fn switch_to_theme(&mut self, theme_name: &str) {
         // Get the new theme
-        let new_theme = crate::ui::themes::ThemePresets::get_theme(theme_name);
+        let new_theme = crate::ui::themes::ThemePresets::get_theme_for(theme_name, self.target);
 
         // Preserve user's enabled/disabled state and custom settings by merging
         let mut merged_segments = Vec::new();
@@ -678,14 +683,14 @@ impl App {
     /// Reset current theme to its default configuration
     fn reset_to_theme_defaults(&mut self) {
         let current_theme = self.config.theme.clone();
-        self.config = crate::ui::themes::ThemePresets::get_theme(&current_theme);
+        self.config = crate::ui::themes::ThemePresets::get_theme_for(&current_theme, self.target);
         self.selected_segment = 0;
         self.preview.update_preview(&self.config);
         self.status_message = Some(format!("Reset {} theme to defaults", current_theme));
     }
 
     fn save_config(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        self.config.save()?;
+        self.config.save_for_target(self.target)?;
         Ok(())
     }
 
@@ -716,7 +721,11 @@ impl App {
     /// Write current config to the current theme file
     fn write_to_current_theme(&mut self) {
         let current_theme = &self.config.theme;
-        match crate::ui::themes::ThemePresets::save_theme(current_theme, &self.config) {
+        match crate::ui::themes::ThemePresets::save_theme_for(
+            current_theme,
+            &self.config,
+            self.target,
+        ) {
             Ok(_) => {
                 self.status_message = Some(format!("Wrote config to theme: {}", current_theme));
             }
@@ -729,7 +738,8 @@ impl App {
 
     /// Save current config as a new theme with the given name
     fn save_as_new_theme(&mut self, theme_name: &str) {
-        match crate::ui::themes::ThemePresets::save_theme(theme_name, &self.config) {
+        match crate::ui::themes::ThemePresets::save_theme_for(theme_name, &self.config, self.target)
+        {
             Ok(_) => {
                 // Update current theme to the new one
                 self.config.theme = theme_name.to_string();

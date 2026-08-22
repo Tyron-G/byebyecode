@@ -248,7 +248,11 @@ impl NormalizedUsage {
 impl Config {
     /// Check if current config matches the specified theme preset
     pub fn matches_theme(&self, theme_name: &str) -> bool {
-        let theme_preset = crate::ui::themes::ThemePresets::get_theme(theme_name);
+        self.matches_theme_for(theme_name, crate::target::Target::Claude)
+    }
+
+    pub fn matches_theme_for(&self, theme_name: &str, target: crate::target::Target) -> bool {
+        let theme_preset = crate::ui::themes::ThemePresets::get_theme_for(theme_name, target);
 
         // Compare style config
         if self.style.mode != theme_preset.style.mode
@@ -274,7 +278,11 @@ impl Config {
 
     /// Check if current config has been modified from the selected theme
     pub fn is_modified_from_theme(&self) -> bool {
-        !self.matches_theme(&self.theme)
+        self.is_modified_from_theme_for(crate::target::Target::Claude)
+    }
+
+    pub fn is_modified_from_theme_for(&self, target: crate::target::Target) -> bool {
+        !self.matches_theme_for(&self.theme, target)
     }
 
     /// Compare two segment configs for equality

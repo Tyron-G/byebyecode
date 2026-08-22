@@ -119,11 +119,17 @@ byebyecode --check --target codex
 # 查看 ByeByeCode 配置与 Codex 的 tui.status_line
 byebyecode --print --target codex
 
+# 进入 Codex 专属 TUI 配置模式，配置保存到 ~/.codex/byebyecode/
+byebyecode --config --target codex
+
+# 检查 byebyecode 更新（只更新 byebyecode，不修改 ~/.codex/config.toml）
+byebyecode --update --target codex
+
 # 启动 Codex，并透传参数
 byebyecode --wrap --target codex -- --model gpt-5.6
 ```
 
-Codex 兼容只维护 `~/.codex/config.toml` 的 `tui.status_line`，不会修改 Codex 本体或其他配置。Codex footer 只能使用官方内置状态项，Claude 专用的 `byebyecode_usage` 等自定义段落不会注入其中。`--patch` 仅支持 Claude Code。
+Codex 兼容只维护 `~/.codex/config.toml` 的 `tui.status_line`；`--config` 使用独立的 `~/.codex/byebyecode/` 配置和主题目录，`--update` 只检查 byebyecode 自身，不会修改 Codex 本体或其他配置。Codex footer 只能使用官方内置状态项，Claude 专用的 `byebyecode_usage` 等自定义段落不会注入其中。`--patch` 仅支持 Claude Code。
 
 Windows PowerShell 的 npm shim 可能在调用 Node.js 前移除独立的 `--`。ByeByeCode 会在 `--wrap` 模式下自动恢复参数边界，因此上述标准写法和下面的 PowerShell 写法都能把参数传给 Codex：
 

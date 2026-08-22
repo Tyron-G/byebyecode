@@ -1,6 +1,7 @@
 // Theme presets for TUI configuration
 
 use crate::config::{Config, StyleConfig, StyleMode};
+use crate::target::Target;
 
 // Import all theme modules
 use super::{
@@ -12,8 +13,12 @@ pub struct ThemePresets;
 
 impl ThemePresets {
     pub fn get_theme(theme_name: &str) -> Config {
+        Self::get_theme_for(theme_name, Target::Claude)
+    }
+
+    pub fn get_theme_for(theme_name: &str, target: Target) -> Config {
         // First try to load from file
-        if let Ok(config) = Self::load_theme_from_file(theme_name) {
+        if let Ok(config) = Self::load_theme_from_file_for(theme_name, target) {
             return config;
         }
 
@@ -34,7 +39,14 @@ impl ThemePresets {
 
     /// Load theme from file system
     pub fn load_theme_from_file(theme_name: &str) -> Result<Config, Box<dyn std::error::Error>> {
-        let themes_dir = Self::get_themes_path();
+        Self::load_theme_from_file_for(theme_name, Target::Claude)
+    }
+
+    pub fn load_theme_from_file_for(
+        theme_name: &str,
+        target: Target,
+    ) -> Result<Config, Box<dyn std::error::Error>> {
+        let themes_dir = Self::get_themes_path_for(target);
         let theme_path = themes_dir.join(format!("{}.toml", theme_name));
 
         if !theme_path.exists() {
@@ -51,17 +63,21 @@ impl ThemePresets {
     }
 
     /// Get the themes directory path (~/.claude/byebyecode/themes/)
-    fn get_themes_path() -> std::path::PathBuf {
-        if let Some(home) = dirs::home_dir() {
-            home.join(".claude/byebyecode").join("themes")
-        } else {
-            std::path::PathBuf::from(".claude/byebyecode/themes")
-        }
+    fn get_themes_path_for(target: Target) -> std::path::PathBuf {
+        crate::config::ConfigLoader::get_themes_path_for(target)
     }
 
     /// Save current config as a new theme
     pub fn save_theme(theme_name: &str, config: &Config) -> Result<(), Box<dyn std::error::Error>> {
-        let themes_dir = Self::get_themes_path();
+        Self::save_theme_for(theme_name, config, Target::Claude)
+    }
+
+    pub fn save_theme_for(
+        theme_name: &str,
+        config: &Config,
+        target: Target,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let themes_dir = Self::get_themes_path_for(target);
         let theme_path = themes_dir.join(format!("{}.toml", theme_name));
 
         // Create themes directory if it doesn't exist
@@ -79,6 +95,10 @@ impl ThemePresets {
 
     /// List all available themes (built-in + custom)
     pub fn list_available_themes() -> Vec<String> {
+        Self::list_available_themes_for(Target::Claude)
+    }
+
+    pub fn list_available_themes_for(target: Target) -> Vec<String> {
         let mut themes = vec![
             "cometix".to_string(),
             "default".to_string(),
@@ -92,7 +112,7 @@ impl ThemePresets {
         ];
 
         // Add custom themes from file system
-        if let Ok(themes_dir) = std::fs::read_dir(Self::get_themes_path()) {
+        if let Ok(themes_dir) = std::fs::read_dir(Self::get_themes_path_for(target)) {
             for entry in themes_dir.flatten() {
                 if let Some(name) = entry.file_name().to_str() {
                     if name.ends_with(".toml") {

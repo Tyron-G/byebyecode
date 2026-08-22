@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `--config --target codex` 现在可以打开 Codex 专属 TUI 配置，配置和主题保存到 `~/.codex/byebyecode/`。
+- `--update --target codex` 现在复用 byebyecode 自身的更新检查入口。
+
 ## [1.1.30] - 2026-08-21
 
 ### Added

@@ -45,7 +45,8 @@ impl ConfigLoader {
             let theme_path = themes_dir.join(format!("{}.toml", theme_name));
 
             if !theme_path.exists() {
-                let theme_config = crate::ui::themes::ThemePresets::get_theme(theme_name);
+                let theme_config =
+                    crate::ui::themes::ThemePresets::get_theme_for(theme_name, target);
                 let content = toml::to_string_pretty(&theme_config)?;
                 fs::write(&theme_path, content)?;
                 println!("Created theme file: {}", theme_path.display());
@@ -114,7 +115,8 @@ impl ConfigLoader {
             let theme_path = themes_dir.join(format!("{}.toml", theme_name));
 
             if !theme_path.exists() {
-                let theme_config = crate::ui::themes::ThemePresets::get_theme(theme_name);
+                let theme_config =
+                    crate::ui::themes::ThemePresets::get_theme_for(theme_name, target);
                 let content = toml::to_string_pretty(&theme_config)?;
                 fs::write(&theme_path, content)?;
             }

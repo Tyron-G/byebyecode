@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::target::Target;
 use ratatui::{
     layout::Rect,
     widgets::{Block, Borders, Paragraph},
@@ -13,12 +14,12 @@ impl ThemeSelectorComponent {
         Self
     }
 
-    pub fn render(&self, f: &mut Frame, area: Rect, config: &Config) {
-        let is_modified = config.is_modified_from_theme();
+    pub fn render(&self, f: &mut Frame, area: Rect, config: &Config, target: Target) {
+        let is_modified = config.is_modified_from_theme_for(target);
         let modified_indicator = if is_modified { "*" } else { "" };
 
         // Get all available themes dynamically
-        let available_themes = crate::ui::themes::ThemePresets::list_available_themes();
+        let available_themes = crate::ui::themes::ThemePresets::list_available_themes_for(target);
 
         // Calculate available width (minus borders and spacing)
         let content_width = area.width.saturating_sub(2); // Remove borders

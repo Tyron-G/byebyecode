@@ -71,15 +71,15 @@ impl ConfigLoader {
         if let Some(home) = dirs::home_dir() {
             let root = match target {
                 Target::Claude => home.join(".claude"),
-                Target::Codex => home.join(".codex"),
-                Target::Both => home.join(".claude"), // Both 默认使用 Claude 路径
+                Target::Codex => home.join(".claude"), // Codex 也使用 Claude 路径
+                Target::Both => home.join(".claude"),
             };
             root.join("byebyecode").join("themes")
         } else {
             match target {
                 Target::Claude => PathBuf::from(".claude/byebyecode/themes"),
-                Target::Codex => PathBuf::from(".codex/byebyecode/themes"),
-                Target::Both => PathBuf::from(".claude/byebyecode/themes"), // Both 默认使用 Claude 路径
+                Target::Codex => PathBuf::from(".claude/byebyecode/themes"), // Codex 也使用 Claude 路径
+                Target::Both => PathBuf::from(".claude/byebyecode/themes"),
             }
         }
     }
@@ -173,15 +173,15 @@ impl Config {
         if let Some(home) = dirs::home_dir() {
             let root = match target {
                 Target::Claude => home.join(".claude"),
-                Target::Codex => home.join(".codex"),
-                Target::Both => home.join(".claude"), // Both 默认使用 Claude 路径
+                Target::Codex => home.join(".claude"), // Codex 也使用 Claude 路径
+                Target::Both => home.join(".claude"),
             };
             root.join("byebyecode").join("config.toml")
         } else {
             match target {
                 Target::Claude => PathBuf::from(".claude/byebyecode/config.toml"),
-                Target::Codex => PathBuf::from(".codex/byebyecode/config.toml"),
-                Target::Both => PathBuf::from(".claude/byebyecode/config.toml"), // Both 默认使用 Claude 路径
+                Target::Codex => PathBuf::from(".claude/byebyecode/config.toml"), // Codex 也使用 Claude 路径
+                Target::Both => PathBuf::from(".claude/byebyecode/config.toml"),
             }
         }
     }
